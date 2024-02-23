@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace eCommerce.Controllers
 {
-    [Authorize] // Requires authorization for all actions in this controller
+    [Authorize] 
     [ApiController]
     [Route("api/[controller]")]
     public class ShoppingCartController : ControllerBase
@@ -33,20 +33,7 @@ namespace eCommerce.Controllers
         //    return Ok(userShoppingCart);
         //}
 
-        [HttpGet("GetProducts")]
-        public IActionResult GetProducts()
-        {
-            string currentUserId = User.Identity.Name;
-            ShoppingCart userShoppingCart = _context.ShoppingCarts
-                .FirstOrDefault(cart => cart.User == currentUserId);
-
-            if (userShoppingCart == null)
-            {
-                return Ok(new List<Product>()); // Return an empty list if the cart is not found
-            }
-
-            return Ok(userShoppingCart.Products);
-        }
+       
 
         [HttpPost("RemoveItem/{productId}")]
         public IActionResult RemoveItem(int productId)
@@ -102,19 +89,21 @@ namespace eCommerce.Controllers
             return NotFound(); // Product not found
         }
 
-        [HttpGet]
-        public IActionResult GetAllProducts()
+        [HttpGet("GetProducts")]
+        public IActionResult GetProducts()
         {
-            var allProducts = _context.Products.ToList();
-            return Ok(allProducts);
+            string currentUserId = User.Identity.Name;
+            ShoppingCart userShoppingCart = _context.ShoppingCarts
+                .FirstOrDefault(cart => cart.User == currentUserId);
+
+            if (userShoppingCart == null)
+            {
+                return Ok(new List<Product>()); // Return an empty list if the cart is not found
+            }
+
+            return Ok(userShoppingCart.Products);
         }
 
-        [HttpGet("GetByCategory/{categoryId}")]
-        public IActionResult GetProductsByCategory(int categoryId)
-        {
-            var productsInCategory = _context.Products.Where(p => p.ProductCategory.Id == categoryId).ToList();
-            return Ok(productsInCategory);
-        }
 
         [HttpPost("AddProduct")]
         public IActionResult AddProduct([FromBody] Product newProduct)

@@ -16,6 +16,10 @@ namespace eCommerce.Data
         // DbSet for the ShoppingCart model
         public DbSet<ShoppingCart> ShoppingCarts { get; set; }
 
-        
+      
+
+
+
+
     }
 }
