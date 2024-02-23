@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-//builder.Services.AddDbContext<AppDataContext>(
-//    options => options.UseInMemoryDatabase("DataDb"));
+builder.Services.AddDbContext<AppDataContext>(
+    options => options.UseInMemoryDatabase("DataDb"));
 
 builder.Services.AddDbContext<AppSecurityContext>(
     options => options.UseInMemoryDatabase("SecurityDb"));
