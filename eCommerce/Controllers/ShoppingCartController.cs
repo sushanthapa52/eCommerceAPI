@@ -20,21 +20,23 @@ namespace eCommerce.Controllers
             _context = context;
         }
 
-        //[HttpGet]
-        //public IActionResult Get()
-        //{
-        //    // Implement logic to get the user's shopping cart based on the currently authenticated user
-        //    string currentUserId = User.Identity.Name; // Example: assuming the user's ID is stored in the Name claim
+        //Add a Get endpoint that returns all products in the user's shopping cart.	
+        [HttpGet("GetProducts")]
+        public IActionResult GetProducts()
+        {
+            string currentUserId = User.Identity.Name;
+            ShoppingCart userShoppingCart = _context.ShoppingCarts
+                .FirstOrDefault(cart => cart.User == currentUserId);
 
-        //    // Retrieve the shopping cart from the database based on the user ID
-        //    ShoppingCart userShoppingCart = _context.ShoppingCarts
-        //        .FirstOrDefault(cart => cart.User == currentUserId);
+            if (userShoppingCart == null)
+            {
+                return Ok(new List<Product>());
+            }
 
-        //    return Ok(userShoppingCart);
-        //}
+            return Ok(userShoppingCart.Products);
+        }
 
-       
-
+        //Add a Post endpoint that takes a single ID and removes the item from the shopping cart.	
         [HttpPost("RemoveItem/{productId}")]
         public IActionResult RemoveItem(int productId)
         {
@@ -57,70 +59,47 @@ namespace eCommerce.Controllers
             return NotFound(); // Product or shopping cart not found
         }
 
-        [HttpPost("AddItem/{productId}")]
-        public IActionResult AddItem(int productId)
+        // PUT api/shoppingcart/additem/{userId}
+        [HttpPut("additem/{userId}")]
+        public IActionResult AddItemToCart([FromBody] Product productRequest, string userId)
         {
-            string currentUserId = User.Identity.Name;
+            // Find or create the shopping cart
+            var shoppingCart = _context.ShoppingCarts.FirstOrDefault(cart => cart.User == userId);
 
-            // Create or retrieve the shopping cart for the current user
-            ShoppingCart userShoppingCart = _context.ShoppingCarts
-                .FirstOrDefault(cart => cart.User == currentUserId);
-
-            if (userShoppingCart == null)
+            if (shoppingCart == null)
             {
-                userShoppingCart = new ShoppingCart
+                shoppingCart = new ShoppingCart
                 {
-                    User = currentUserId,
+                    Id = shoppingCart.Id + 1, // Generate a new ID (replace with your logic)
+                    User = userId,
                     Products = new List<Product>()
                 };
-                _context.ShoppingCarts.Add(userShoppingCart);
+
+                _context.ShoppingCarts.Add(shoppingCart);
             }
 
-            // Retrieve the product from the database
-            Product productToAdd = _context.Products.Find(productId);
+            // Check if the product is already in the cart
+            var existingProduct = shoppingCart.Products.FirstOrDefault(product => product.Id == productRequest.Id);
 
-            if (productToAdd != null)
+            if (existingProduct != null)
             {
-                userShoppingCart.Products.Add(productToAdd);
-                _context.SaveChanges();
-                return Ok();
+                return BadRequest("Product is already in the shopping cart");
             }
 
-            return NotFound(); // Product not found
-        }
-
-        [HttpGet("GetProducts")]
-        public IActionResult GetProducts()
-        {
-            string currentUserId = User.Identity.Name;
-            ShoppingCart userShoppingCart = _context.ShoppingCarts
-                .FirstOrDefault(cart => cart.User == currentUserId);
-
-            if (userShoppingCart == null)
+            // Add the product to the cart using data from the request
+            var newProduct = new Product
             {
-                return Ok(new List<Product>()); // Return an empty list if the cart is not found
-            }
+                Id = productRequest.Id,
+                Name = productRequest.Name,
+                Price = productRequest.Price
+               
+            };
 
-            return Ok(userShoppingCart.Products);
+            shoppingCart.Products.Add(newProduct);
+
+            return Ok($"Product with ID {productRequest.Id} added to the shopping cart");
         }
-
-
-        [HttpPost("AddProduct")]
-        public IActionResult AddProduct([FromBody] Product newProduct)
-        {
-            if (newProduct != null)
-            {
-                _context.Products.Add(newProduct);
-                _context.SaveChanges();
-                return Ok();
-            }
-
-            return BadRequest(); // Invalid product data
-        }
-
-
-
-
-
     }
-}
+
+
+ }

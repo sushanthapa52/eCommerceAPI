@@ -15,6 +15,7 @@ namespace eCommerce.Controllers
         private readonly ILogger<ProductController> _logger;
         private readonly AppDataContext _context;
 
+
         public ProductController(ILogger<ProductController> logger, AppDataContext context)
         {
             _logger = logger;
@@ -54,10 +55,29 @@ namespace eCommerce.Controllers
             }
         }
 
+        // POST api/product/productsincategory  
+        [HttpPost("productsincategory")]
+        public IActionResult GetProductsInCategory([FromBody] int categoryId)
+        {
+            try
+            {
+                // Retrieve the products in the specified category
+                var productsInCategory = _context.Products
+                    .Where(p => p.CategoryId == categoryId)
+                    .ToList();
 
+                if (!productsInCategory.Any())
+                {
+                    return NotFound($"No products found in category with ID {categoryId}");
+                }
 
-
-
+                return Ok(productsInCategory);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
 
 
         // get product by id
@@ -107,6 +127,8 @@ namespace eCommerce.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+
+
 
 
 
