@@ -22,6 +22,7 @@ namespace eCommerce.Controllers
         }
 
         //Add a Get endpoint that returns all products in the user's shopping cart.	
+        [HttpGet]
         public async Task<IActionResult> GetProducts()
         {
             try
@@ -81,6 +82,8 @@ namespace eCommerce.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+        
+        
         //Add a Post endpoint that takes a single ID and adds the item to the shopping cart. Make sure to create the Shopping Cart if needed and Assign the Current Users Email to the User property.
         [HttpPost("AddToCart/{productId}")]
         public async Task<IActionResult> AddToCart(int productId)
