@@ -3,6 +3,7 @@ using eCommerceClassLib.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace eCommerce.Controllers
 {
@@ -21,85 +22,110 @@ namespace eCommerce.Controllers
         }
 
         //Add a Get endpoint that returns all products in the user's shopping cart.	
-        [HttpGet("GetProducts")]
-        public IActionResult GetProducts()
+        public async Task<IActionResult> GetProducts()
         {
-            string currentUserId = User.Identity.Name;
-            ShoppingCart userShoppingCart = _context.ShoppingCarts
-                .FirstOrDefault(cart => cart.User == currentUserId);
-
-            if (userShoppingCart == null)
+            try
             {
-                return Ok(new List<Product>());
-            }
+                string currentUserName = User.Identity.Name;
 
-            return Ok(userShoppingCart.Products);
+                // Retrieve the user's shopping cart with included products
+                var userShoppingCart = await _context.ShoppingCarts
+                    .Include(cart => cart.Products) // Include related products
+                    .Where(cart => cart.User == currentUserName)
+                    .FirstOrDefaultAsync();
+
+                if (userShoppingCart == null)
+                {
+                    return NotFound("Shopping cart not found for the user.");
+                }
+
+                // Extract the products from the shopping cart
+                var products = userShoppingCart.Products;
+
+                return Ok(products);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         //Add a Post endpoint that takes a single ID and removes the item from the shopping cart.	
-        [HttpPost("RemoveItem/{productId}")]
-        public IActionResult RemoveItem(int productId)
+        [HttpPost("RemoveProduct/{productId}")]
+        public async Task<IActionResult> RemoveItem(int productId)
         {
-            string currentUserId = User.Identity.Name;
-            ShoppingCart userShoppingCart = _context.ShoppingCarts
-                .FirstOrDefault(cart => cart.User == currentUserId);
-
-            if (userShoppingCart != null)
+            try
             {
-                // Assuming you have a method to remove an item from the shopping cart
-                var productToRemove = userShoppingCart.Products.FirstOrDefault(p => p.Id == productId);
-                if (productToRemove != null)
+                string currentUserName = User.Identity.Name;
+
+                var userShoppingCart = await _context.ShoppingCarts
+                    .Include(c => c.Products)
+                    .FirstOrDefaultAsync(cart => cart.User == currentUserName);
+
+                if (userShoppingCart != null)
                 {
-                    userShoppingCart.Products.Remove(productToRemove);
-                    _context.SaveChanges();
+                    var productToRemove = userShoppingCart.Products.FirstOrDefault(p => p.Id == productId);
+
+                    if (productToRemove != null)
+                    {
+                        userShoppingCart.Products.Remove(productToRemove);
+                        await _context.SaveChangesAsync();
+                        return Ok();
+                    }
+                }
+
+                return NotFound(); // Product or shopping cart not found
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+        //Add a Post endpoint that takes a single ID and adds the item to the shopping cart. Make sure to create the Shopping Cart if needed and Assign the Current Users Email to the User property.
+        [HttpPost("AddToCart/{productId}")]
+        public async Task<IActionResult> AddToCart(int productId)
+        {
+            try
+            {
+                string currentUserName = User.Identity.Name;
+
+                // Retrieve or create the user's shopping cart
+                var userShoppingCart = await _context.ShoppingCarts
+                    .Include(c => c.Products)
+                    .FirstOrDefaultAsync(cart => cart.User == currentUserName);
+
+                if (userShoppingCart == null)
+                {
+                    // Create a new shopping cart for the user
+                    userShoppingCart = new ShoppingCart
+                    {
+                        User = currentUserName,
+                        Products = new List<Product>()
+                    };
+                    _context.ShoppingCarts.Add(userShoppingCart);
+                }
+
+                // Retrieve the product to add to the cart
+                var productToAdd = await _context.Products.FindAsync(productId);
+
+                if (productToAdd != null)
+                {
+                    // Add the product to the user's shopping cart
+                    userShoppingCart.Products.Add(productToAdd);
+                    await _context.SaveChangesAsync();
+
                     return Ok();
                 }
-            }
 
-            return NotFound(); // Product or shopping cart not found
+                return NotFound(); // Product not found
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
-        // PUT api/shoppingcart/additem/{userId}
-        [HttpPut("additem/{userId}")]
-        public IActionResult AddItemToCart([FromBody] Product productRequest, string userId)
-        {
-            // Find or create the shopping cart
-            var shoppingCart = _context.ShoppingCarts.FirstOrDefault(cart => cart.User == userId);
-
-            if (shoppingCart == null)
-            {
-                shoppingCart = new ShoppingCart
-                {
-                    Id = shoppingCart.Id + 1, // Generate a new ID (replace with your logic)
-                    User = userId,
-                    Products = new List<Product>()
-                };
-
-                _context.ShoppingCarts.Add(shoppingCart);
-            }
-
-            // Check if the product is already in the cart
-            var existingProduct = shoppingCart.Products.FirstOrDefault(product => product.Id == productRequest.Id);
-
-            if (existingProduct != null)
-            {
-                return BadRequest("Product is already in the shopping cart");
-            }
-
-            // Add the product to the cart using data from the request
-            var newProduct = new Product
-            {
-                Id = productRequest.Id,
-                Name = productRequest.Name,
-                Price = productRequest.Price
-               
-            };
-
-            shoppingCart.Products.Add(newProduct);
-
-            return Ok($"Product with ID {productRequest.Id} added to the shopping cart");
-        }
     }
 
 
- }
+}
