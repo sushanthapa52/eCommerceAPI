@@ -1,7 +1,8 @@
 ﻿using eCommerce.Data;
-using eCommerce.Models;
+using eCommerceClassLib.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,33 +22,14 @@ namespace eCommerce.Controllers
             _logger = logger;
             _context = context;
         }
-        //function to return all the products
+        // Add a Get endpoint that returns all products.	
         [HttpGet]
-        public IActionResult GetAllProducts()
-        {
-            var allProducts = _context.Products.ToList();
-            return Ok(allProducts);
-        }
-
-        [HttpGet("category/{categoryId}")]
-        public IActionResult GetProductsByCategory(int categoryId)
+        public async Task<IActionResult> GetAllProducts()
         {
             try
             {
-                // Retrieve the category with associated products
-                var categoryWithProducts = _context.Categories
-                    .Include(c => c.Products)
-                    .FirstOrDefault(c => c.Id == categoryId);
-
-                if (categoryWithProducts == null)
-                {
-                    return NotFound("Category not found");
-                }
-
-                // Extract the products from the category
-                var products = categoryWithProducts.Products;
-
-                return Ok(products);
+                var allProducts = await _context.Products.ToListAsync();
+                return Ok(allProducts);
             }
             catch (Exception ex)
             {
@@ -55,21 +37,15 @@ namespace eCommerce.Controllers
             }
         }
 
-        // POST api/product/productsincategory  
-        [HttpPost("productsincategory")]
-        public IActionResult GetProductsInCategory([FromBody] int categoryId)
+        //Add a Get endpoint that takes a category Id and returns all products in that category.	
+        [HttpGet("retrieveProductsByCategory/{categoryId}")]
+        public async Task<IActionResult> RetrieveProductsByCategory(int categoryId)
         {
             try
             {
-                // Retrieve the products in the specified category
-                var productsInCategory = _context.Products
-                    .Where(p => p.CategoryId == categoryId)
-                    .ToList();
-
-                if (!productsInCategory.Any())
-                {
-                    return NotFound($"No products found in category with ID {categoryId}");
-                }
+                var productsInCategory = await _context.Products
+                    .Where(product => product.ProductCategory.Id == categoryId)
+                    .ToListAsync();
 
                 return Ok(productsInCategory);
             }
@@ -79,59 +55,28 @@ namespace eCommerce.Controllers
             }
         }
 
-
-        // get product by id
-        [HttpGet("{id}")]
-        public IActionResult GetProductById(int id)
-        {
-            var product = _context.Products.Find(id);
-
-            if (product == null)
-            {
-                return NotFound(); // Product not found
-            }
-
-            return Ok(product);
-        }
-
-        [HttpPost]
-        public IActionResult AddProduct([FromBody] Product product)
+        //Add a Post endpoint that takes a single product and adds it to the database.	
+        [HttpPost("addProductToDB")]
+        public async Task<IActionResult> AddProduct([FromBody] Product newProduct)
         {
             try
             {
-                if (ModelState.IsValid)
+                if (newProduct == null)
                 {
-                    // Check if the associated category exists or create it if not
-                    var category = _context.Categories.Find(product.CategoryId);
-                    if (category == null)
-                    {
-                        // Create a new category
-                        category = new Category { Id = product.CategoryId, Description = "Default Category" };
-                        _context.Categories.Add(category);
-                    }
-
-                    // Associate the product with the category
-                    product.Category = category;
-
-                    // Add the product to the database
-                    _context.Products.Add(product);
-                    _context.SaveChanges();
-
-                    return Ok("Product added successfully");
+                    return BadRequest("Invalid product data");
                 }
 
-                return BadRequest("Invalid product data");
+                _context.Products.Add(newProduct);
+                await _context.SaveChangesAsync();
+
+                var allProducts = await _context.Products.ToListAsync();
+                return Ok(allProducts);
             }
             catch (Exception ex)
             {
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-
-
-
-
-
 
 
 
