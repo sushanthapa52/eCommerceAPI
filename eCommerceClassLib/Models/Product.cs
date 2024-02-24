@@ -1,4 +1,4 @@
-﻿namespace eCommerce.Models
+﻿namespace eCommerceClassLib.Models
 {
     public class Product
     {
@@ -9,8 +9,6 @@
 
         public decimal Price { get; set; }
 
-        // Foreign key
-        public int CategoryId { get; set; }
-        public Category Category { get; set; }
+        public Category ProductCategory { get; set; }
     }
 }

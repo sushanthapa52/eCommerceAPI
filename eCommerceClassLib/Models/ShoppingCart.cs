@@ -1,4 +1,4 @@
-﻿namespace eCommerce.Models
+﻿namespace eCommerceClassLib.Models
 {
     public class ShoppingCart
     {
